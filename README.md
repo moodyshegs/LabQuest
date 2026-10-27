@@ -1,6 +1,6 @@
 # LabQuest Science Learning
 
-A React-first prototype for senior-secondary practical science learning. It demonstrates school setup, student and teacher workspaces, guided virtual practicals, an interactive low-voltage circuit simulation, Environmental Science content, assessment authoring, grading, progress, and in-app activity alerts.
+A science lab on the go. LabQuest is a React-first prototype for senior-secondary practical science learning. It demonstrates school setup, student and teacher workspaces, guided virtual practicals, an interactive low-voltage circuit simulation, Environmental Science content, assessment authoring, grading, progress, and in-app activity alerts.
 
 ## Stack
 
@@ -11,7 +11,7 @@ A React-first prototype for senior-secondary practical science learning. It demo
 
 The React client is separated from the Express routes and database access so another client, including a React Native app, can later reuse the API and product concepts. Science content is stored in editable modules under `client/src/data/` and `server/sample-data.js`.
 
-## Run in the project environment
+## Run locally
 
 ```bash
 pnpm install

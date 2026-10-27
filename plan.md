@@ -38,3 +38,9 @@ Reuse the existing LabQuest science-notebook and learning-dashboard identity rat
 The existing Vite development middleware and Express production server serve the React app from the same origin. Keep the route manifest synchronized with the single root app route. Do not add authentication or suggest the prototype dashboard is a protected student account area; secure authentication and school-level role authorization remain future work. The existing public-demo warning remains visible in the dashboard. The homepage should also label dashboard access as a sample experience so visitors do not mistake the role switcher for real login.
 
 Search and link previews should identify only the public home page; include its meaningful content in the initial HTML along with accurate page and social-card metadata using the existing known publication origin.
+
+## Interactive practical expansion — complete
+
+The practical library now contains 30 interactive activities: five each for Physics, Chemistry, Biology, Agriculture, Environmental Science and Electronics. Each activity uses the shared `InteractiveLab` workspace with left-side input controls, a centre visual model, live measurements, an observation readout and an SVG graph that redraws from the current inputs. The catalogue and model definitions live in `client/src/data/interactivePracticals.js`; the workspace and responsive styling live in `client/src/components/InteractiveLab.jsx` and `client/src/interactive.css`.
+
+Validation completed: `pnpm install --frozen-lockfile && pnpm build`, catalogue count/subject distribution checks, HTTP smoke test against the Express/Vite server, and server-side rendering of all 30 interactive practicals through the project’s automatic JSX transform.

@@ -7,6 +7,7 @@ const subjects = [
   { name: 'Biology', topic: 'Living systems and field observations', icon: Leaf, tone: 'mint' },
   { name: 'Agriculture', topic: 'Soil, crops and sustainable growing', icon: Sprout, tone: 'gold' },
   { name: 'Environmental Science', topic: 'Water, ecosystems and our surroundings', icon: Microscope, tone: 'mint' },
+  { name: 'Electronics', topic: 'Circuits, signals and simple control systems', icon: Atom, tone: 'blue' },
 ];
 
 const steps = [
@@ -51,7 +52,7 @@ export default function HomePage({ onOpenDashboard }) {
         </div>
       </section>
 
-      <div className="landing-subject-ribbon" aria-label="Science subjects"><span>LEARN THROUGH PRACTICE</span>{subjects.map(({ name, tone }) => <span className={`landing-subject-chip landing-subject-chip--${tone}`} key={name}>{name}</span>)}</div>
+      <div className="landing-subject-ribbon" aria-label="Science subjects"><span>30 INTERACTIVE PRACTICALS · LEARN THROUGH PRACTICE</span>{subjects.map(({ name, tone }) => <span className={`landing-subject-chip landing-subject-chip--${tone}`} key={name}>{name}</span>)}</div>
 
       <section className="landing-section landing-approach" id="approach" aria-labelledby="approach-title">
         <div className="landing-section-intro"><span className="landing-eyebrow">WHY LABQUEST</span><h2 id="approach-title">From reading science to <em>doing science.</em></h2><p>Build practical confidence through a simple learning rhythm: ask, explore, observe and explain.</p></div>
@@ -59,7 +60,7 @@ export default function HomePage({ onOpenDashboard }) {
       </section>
 
       <section className="landing-section landing-subjects" id="subjects" aria-labelledby="subjects-title">
-        <div className="landing-subjects-heading"><div><span className="landing-eyebrow">A WIDER SCIENCE CLASSROOM</span><h2 id="subjects-title">One practical mindset.<br /><em>Many ways to discover.</em></h2></div><p>Explore familiar science subjects through guided activities designed to make concepts easier to investigate and discuss.</p></div>
+        <div className="landing-subjects-heading"><div><span className="landing-eyebrow">A WIDER SCIENCE CLASSROOM</span><h2 id="subjects-title">One practical mindset.<br /><em>Many ways to discover.</em></h2></div><p>Explore 30 guided, interactive practicals across six subjects, designed to make concepts easier to investigate and discuss.</p></div>
         <div className="landing-subject-list">{subjects.map(({ name, topic, icon: Icon, tone }, index) => <article className="landing-subject-row" key={name}><span className={`landing-subject-icon landing-subject-icon--${tone}`}><Icon size={19} /></span><span className="landing-subject-index">0{index + 1}</span><h3>{name}</h3><p>{topic}</p><ArrowUpRight className="landing-subject-arrow" size={17} /></article>)}</div>
       </section>
 

@@ -3,6 +3,7 @@ import { AlertCircle, Check, X } from 'lucide-react';
 import { Sidebar, Header, NotificationPanel } from './components/Shell.jsx';
 import { SchoolDialog, CreateAssessmentDialog } from './components/Dialogs.jsx';
 import { DashboardPage, PracticalsPage, PracticalSessionPage, AssessmentsPage, QuizExperience, ProgressPage, ClassPage, ReviewPage } from './pages/Pages.jsx';
+import HomePage from './pages/HomePage.jsx';
 import { api } from './lib/api.js';
 import { assessmentCatalog, initialAlerts, initialSubmissions, practicalCatalog } from './data/content.js';
 
@@ -16,7 +17,7 @@ const starter = {
 
 export default function App() {
   const [role, setRole] = useState('student');
-  const [view, setView] = useState('dashboard');
+  const [view, setView] = useState('landing');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bootstrap, setBootstrap] = useState(starter);
   const [assessments, setAssessments] = useState(assessmentCatalog);
@@ -52,7 +53,7 @@ export default function App() {
   }, [toast]);
 
   const notify = (title, message, tone = 'success') => setToast({ title, message, tone });
-  const goTo = (nextView) => { setSelectedPractical(null); setSelectedAssessment(null); setView(nextView); };
+  const goTo = (nextView) => { setSelectedPractical(null); setSelectedAssessment(null); setView(nextView); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const openPractical = (practical) => { const match = practicalCatalog.find((item) => item.slug === practical.slug) || practicalCatalog[0]; setSelectedPractical(match); setSelectedAssessment(null); setView('practical-session'); };
   const startAssessment = (assessment) => { setSelectedAssessment(assessment); setView('quiz'); };
 
@@ -119,6 +120,7 @@ export default function App() {
     setAlerts((current) => current.map((item) => item.id === id ? { ...item, unread: false } : item));
     if (Number.isInteger(Number(id))) api.markAlertRead(id);
   };
+  if (view === 'landing') return <HomePage onOpenDashboard={(nextRole = 'student') => { setRole(nextRole); goTo('dashboard'); }} />;
   const studentClass = bootstrap.studentClassName || bootstrap.classes?.[0]?.name;
   const visibleAssessments = role === 'teacher' ? assessments : assessments.filter((item) => item.classroomName === studentClass || (!bootstrap.connected && !item.classroomName));
   const page = selectedPractical ? <PracticalSessionPage practical={selectedPractical} completed={completed.includes(selectedPractical.slug)} onBack={() => goTo('practicals')} onComplete={completePractical} />
@@ -132,7 +134,7 @@ export default function App() {
                   : <DashboardPage role={role} bootstrap={bootstrap} assessments={visibleAssessments} completed={completed} points={points} onNavigate={goTo} onOpenPractical={openPractical} onStartAssessment={startAssessment} onCreate={() => setCreateDialog(true)} />;
 
   return <div className="app-shell"><Sidebar active={view === 'practical-session' ? 'practicals' : view === 'quiz' ? 'assessments' : view} role={role} setRole={setRole} setActive={goTo} school={bootstrap.school} onSchool={() => setSchoolDialog(true)} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
-    <main className="main-shell"><div className="public-demo-notice" role="note"><strong>PUBLIC SAMPLE DEMO</strong><span>Use fictional details only. This prototype has no secure sign-in or school permissions; do not enter real student information.</span></div><Header role={role} school={bootstrap.school} alerts={alerts} onNotifications={() => setNotificationOpen(true)} onSchool={() => setSchoolDialog(true)} onMenu={() => setMobileOpen(true)} onCreate={() => setCreateDialog(true)} /><div className="workspace-content">{page}</div></main>
+    <main className="main-shell"><div className="public-demo-notice" role="note"><strong>PUBLIC SAMPLE DEMO</strong><span>Use fictional details only. This prototype has no secure sign-in or school permissions; do not enter real student information.</span></div><Header role={role} school={bootstrap.school} alerts={alerts} onNotifications={() => setNotificationOpen(true)} onSchool={() => setSchoolDialog(true)} onMenu={() => setMobileOpen(true)} onCreate={() => setCreateDialog(true)} onHome={() => goTo('landing')} /><div className="workspace-content">{page}</div></main>
     {notificationOpen && <NotificationPanel alerts={alerts} onClose={() => setNotificationOpen(false)} onMarkRead={markRead} />}
     {schoolDialog && <SchoolDialog school={bootstrap.school} onClose={() => setSchoolDialog(false)} onSave={saveSchool} />}
     {createDialog && <CreateAssessmentDialog classes={bootstrap.classes || []} onClose={() => setCreateDialog(false)} onCreate={publishAssessment} />}

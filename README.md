@@ -1,6 +1,6 @@
 # LabQuest Science Learning
 
-A React-first prototype for senior-secondary practical science learning. It demonstrates school setup, student and teacher workspaces, guided virtual practicals, an interactive low-voltage circuit simulation, Environmental Science content, assessment authoring, grading, progress, and in-app activity alerts.
+A React-first prototype for senior-secondary practical science learning in Nigerian schools. The public landing page introduces the practical-first approach and links to an openly accessible sample dashboard. It demonstrates school setup, student and teacher workspaces, guided virtual practicals, an interactive low-voltage circuit simulation, Environmental Science content, assessment authoring, grading, progress, and in-app activity alerts.
 
 ## Stack
 

@@ -23,11 +23,17 @@ const demoSchoolAccess = [
 
 const ADMIN_ROUTES = new Set(['/admin', '/school-admin', '/secret-portal']);
 const getCurrentRoute = () => window.location.pathname.toLowerCase();
+const defaultAccounts = [
+  { id: 'demo-admin', email: 'admin@labquest.edu.ng', password: 'LabQuest2026!', role: 'admin', accessCode: 'LABQUEST-ADMIN', name: 'LabQuest Admin', schoolName: 'LabQuest HQ', location: 'Lagos, Nigeria' },
+  { id: 'demo-teacher', email: 'teacher@labquest.edu.ng', password: 'LabQuest2026!', role: 'teacher', accessCode: 'LABQUEST-TEACHER', name: 'Mrs. Esi Boateng', schoolName: 'Northstar Science Academy', location: 'Accra, Ghana' },
+  { id: 'demo-student', email: 'student@labquest.edu.ng', password: 'LabQuest2026!', role: 'student', accessCode: 'LABQUEST-STUDENT', name: 'Amara Owusu', schoolName: 'Northstar Science Academy', location: 'Accra, Ghana' },
+];
 
 export default function App() {
   const [role, setRole] = useState('student');
   const [view, setView] = useState('landing');
   const [auth, setAuth] = useState(null);
+  const [registeredUsers, setRegisteredUsers] = useState(defaultAccounts);
   const [appOwnerMode, setAppOwnerMode] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bootstrap, setBootstrap] = useState(starter);
@@ -62,6 +68,12 @@ export default function App() {
   useEffect(() => {
     if (!auth) return undefined;
     let alive = true;
+    if (auth.role === 'admin') {
+      api.listSchools().then((result) => {
+        if (!alive || !result || result.ok === false) return;
+        setOwnerAccess(Array.isArray(result.schools) ? result.schools : []);
+      });
+    }
     api.bootstrap().then((result) => {
       if (!alive || !result || result.ok === false) return;
       setBootstrap((current) => ({ ...current, ...result }));
@@ -119,34 +131,81 @@ export default function App() {
       return false;
     }
 
-    const code = generateAccessCode(cleanedName);
-    const request = {
-      id: `request-${Date.now()}`,
-      name: cleanedName,
-      code,
-      accessType: 'school-admin',
-      status: 'Pending',
-      region: String(location || 'Awaiting region').trim() || 'Awaiting region',
-      members: 1,
-      lastAccess: 'Just now',
-      contactEmail: String(email || '').trim() || 'pending@labquest.edu.ng',
-    };
+    const response = await api.requestSchoolAccess({ schoolName: cleanedName, location, email, accessType: 'school-admin' });
+    if (!response || !response.ok || !response.request) {
+      notify('School request failed', response?.error || 'The request could not be submitted.', 'error');
+      return false;
+    }
 
-    setOwnerAccess((current) => [request, ...current]);
-    notify('School access requested', `Your request was received. Share access code ${code} with the school admin when approved.`, 'success');
+    setOwnerAccess((current) => [response.request, ...current]);
+    notify('School access requested', `Your request was received. Share access code ${response.request.code} with the school admin when approved.`, 'success');
     return true;
   };
 
   const notify = (title, message, tone = 'success') => setToast({ title, message, tone });
-  const login = async ({ email, password }) => {
+  const registerAccount = async ({ role: selectedRole, email, password, confirmPassword, accessCode, schoolName, schoolEmail, location, plan }) => {
+    const normalizedRole = selectedRole === 'school-admin' ? 'admin' : selectedRole === 'teacher' ? 'teacher' : 'student';
     const normalizedEmail = String(email || '').trim().toLowerCase();
-    const result = await api.login(normalizedEmail, password);
+    const normalizedPassword = String(password || '');
+    const normalizedConfirm = String(confirmPassword || '');
+    const normalizedAccessCode = String(accessCode || '').trim();
+    if (!normalizedEmail || !normalizedPassword || normalizedPassword !== normalizedConfirm) {
+      notify('Registration incomplete', 'Please complete all required fields and confirm the password matches.', 'error');
+      return false;
+    }
+    if (normalizedRole !== 'admin' && !normalizedAccessCode) {
+      notify('School access code required', 'Student and teacher accounts need a valid school access code.', 'error');
+      return false;
+    }
+    if (normalizedRole === 'admin' && !String(schoolName || '').trim()) {
+      notify('School name required', 'Add your school name to continue with school-admin registration.', 'error');
+      return false;
+    }
+
+    const response = await api.register({
+      role: normalizedRole,
+      email: normalizedEmail,
+      password: normalizedPassword,
+      confirmPassword: normalizedConfirm,
+      accessCode: normalizedAccessCode,
+      schoolName: String(schoolName || '').trim(),
+      schoolEmail: String(schoolEmail || normalizedEmail).trim(),
+      location: String(location || '').trim(),
+      plan: String(plan || 'starter').trim(),
+    });
+
+    if (!response || !response.ok) {
+      notify('Registration failed', response?.error || 'The registration could not be completed.', 'error');
+      return false;
+    }
+
+    setRegisteredUsers((current) => [{ id: response.user.id, email: response.user.email, password: normalizedPassword, role: response.user.role, accessCode: response.user.accessCode, name: response.user.name, schoolName: response.user.schoolName, location: response.user.location }, ...current.filter((item) => item.email !== normalizedEmail)]);
+    notify('Registration received', `${normalizedRole === 'admin' ? 'School admin' : normalizedRole === 'teacher' ? 'Teacher' : 'Student'} account created. Please sign in with your email and access code.`, 'success');
+    return true;
+  };
+
+  const login = async ({ email, password, accessCode, role: selectedRole }) => {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const normalizedPassword = String(password || '');
+    const normalizedRole = selectedRole === 'school-admin' ? 'admin' : selectedRole === 'teacher' ? 'teacher' : 'student';
+    const normalizedAccessCode = String(accessCode || '').trim();
+
+    const localUser = registeredUsers.find((user) => user.email.toLowerCase() === normalizedEmail && user.password === normalizedPassword && (!normalizedAccessCode || user.accessCode === normalizedAccessCode || user.role === normalizedRole));
+    if (localUser) {
+      setAuth({ id: localUser.id, email: localUser.email, name: localUser.name, role: localUser.role, schoolName: localUser.schoolName, location: localUser.location });
+      setRole(localUser.role);
+      setView(localUser.role === 'admin' ? 'admin' : 'dashboard');
+      notify('Welcome back', `Signed in as ${localUser.name}.`, 'success');
+      return true;
+    }
+
+    const result = await api.login(normalizedEmail, normalizedPassword, normalizedRole, normalizedAccessCode);
     if (!result || !result.ok || !result.user) {
       notify('Sign-in failed', result?.error || 'Use the LabQuest credentials to open the secure workspace.', 'error');
       return false;
     }
     setAuth(result.user);
-    setRole(result.user.role || 'student');
+    setRole(result.user.role || normalizedRole);
     setView(result.user.role === 'admin' ? 'admin' : 'dashboard');
     if (window.location.pathname !== '/') {
       window.history.pushState({}, '', '/');
@@ -166,35 +225,40 @@ export default function App() {
   const grantDeveloperAccess = async ({ schoolName, schoolCode, accessType }) => {
     const cleanedName = String(schoolName || '').trim();
     const accessKey = String(schoolCode || '').trim().toUpperCase() || generateAccessCode(cleanedName);
-    const validCodes = new Set(['LABQUESTDEV', 'LABQUEST-DEV', 'LABQUESTADMIN', 'NORTHSTAR2026', 'SCHOOLACCESS']);
     const typeMap = { 'school-admin': 'admin', teacher: 'teacher', student: 'student' };
-    if (!cleanedName || (schoolCode && !validCodes.has(accessKey) && !accessKey.includes('-'))) {
-      notify('Access code rejected', 'Use a valid developer access code to authorize a school.', 'error');
+    if (!cleanedName) {
+      notify('Access code rejected', 'Use a valid school name to authorize access.', 'error');
       return;
     }
-    const nextRole = typeMap[accessType] || 'admin';
-    const ownerRecord = {
+
+    const response = await api.approveSchoolAccess({ schoolName: cleanedName, schoolCode: accessKey, accessType });
+    if (!response || !response.ok) {
+      notify('Approval failed', response?.error || 'The school could not be approved.', 'error');
+      return;
+    }
+
+    const ownerRecord = response.school || {
       id: `school-${Date.now()}`,
       name: cleanedName,
       code: accessKey,
       accessType,
       status: 'Active',
-      region: 'Newly approved',
-      members: 40,
+      region: 'Approved',
+      members: 1,
       lastAccess: 'Just now',
     };
     setOwnerAccess((current) => {
-      const existingIndex = current.findIndex((item) => item.name === cleanedName || item.code === accessKey);
+      const existingIndex = current.findIndex((item) => item.name === cleanedName || item.code === ownerRecord.code);
       const nextList = [...current];
       if (existingIndex >= 0) {
-        nextList[existingIndex] = { ...nextList[existingIndex], ...ownerRecord, status: 'Active', accessType, code: accessKey, lastAccess: 'Just now' };
+        nextList[existingIndex] = { ...nextList[existingIndex], ...ownerRecord, status: 'Active', accessType: ownerRecord.accessType || accessType, code: ownerRecord.code || accessKey, lastAccess: 'Just now' };
       } else {
         nextList.unshift(ownerRecord);
       }
       return nextList;
     });
     setBootstrap((current) => ({ ...current, school: { ...current.school, name: cleanedName, schoolCode: accessKey } }));
-    setRole(nextRole);
+    setRole(typeMap[accessType] || 'admin');
     setDeveloperDialog(false);
     setView('dashboard');
     notify('Developer access granted', `${cleanedName} has been assigned ${accessType === 'school-admin' ? 'school-admin' : accessType === 'teacher' ? 'teacher' : 'student'} permissions. Access code: ${accessKey}.`, 'success');
@@ -271,7 +335,7 @@ export default function App() {
   const authorizedRole = auth?.role || role;
 
   if (isAdminRoute && !signedIn) {
-    return <AuthScreen onSubmit={login} onRequestAccess={requestSchoolAccess} onCancel={() => { window.history.pushState({}, '', '/'); setView('landing'); }} />;
+    return <AuthScreen onSubmit={login} onRegister={registerAccount} onCancel={() => { window.history.pushState({}, '', '/'); setView('landing'); }} />;
   }
 
   if (view === 'landing') return <HomePage onOpenDashboard={(nextRole = 'student') => {
@@ -310,21 +374,61 @@ export default function App() {
   </div>;
 }
 
-function AuthScreen({ onSubmit, onRequestAccess, onCancel }) {
+function AuthScreen({ onSubmit, onRegister, onCancel }) {
   const [mode, setMode] = useState('signin');
-  const [email, setEmail] = useState('admin@labquest.edu.ng');
+  const [accountType, setAccountType] = useState('student');
+  const [email, setEmail] = useState('student@labquest.edu.ng');
   const [password, setPassword] = useState('LabQuest2026!');
+  const [confirmPassword, setConfirmPassword] = useState('LabQuest2026!');
+  const [accessCode, setAccessCode] = useState('LABQUEST-STUDENT');
   const [schoolName, setSchoolName] = useState('');
+  const [schoolEmail, setSchoolEmail] = useState('');
   const [location, setLocation] = useState('');
-  const handleSubmit = (event) => {
+  const [plan, setPlan] = useState('starter');
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    if (mode === 'signup') {
-      onRequestAccess({ schoolName, location, email });
+    if (mode === 'register') {
+      const ok = await onRegister({
+        role: accountType,
+        email,
+        password,
+        confirmPassword,
+        accessCode,
+        schoolName,
+        schoolEmail,
+        location,
+        plan,
+      });
+      if (ok) {
+        setMode('signin');
+        setPassword('');
+        setConfirmPassword('');
+      }
       return;
     }
-    onSubmit({ email, password });
+    onSubmit({ email, password, accessCode, role: accountType });
   };
-  return <div className="auth-screen"><div className="auth-panel"><div className="auth-badge">SECURE PORTAL</div><h1>{mode === 'signup' ? 'Request school access' : 'Sign in to LabQuest'}</h1><p>{mode === 'signup' ? 'Register a new school and let the developer review the request before a code is granted.' : 'Access the protected classroom workspace and merged owner/admin console.'}</p><div className="auth-mode-switcher"><button type="button" className={mode === 'signin' ? 'active' : ''} onClick={() => setMode('signin')}>Sign in</button><button type="button" className={mode === 'signup' ? 'active' : ''} onClick={() => setMode('signup')}>Request access</button></div>{mode === 'signin' ? <form onSubmit={handleSubmit} className="auth-form"><label><span>Email</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><label><span>Password</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label><div className="auth-actions"><button type="button" className="button button--outline" onClick={onCancel}>Back</button><button type="submit" className="button button--primary">Sign in</button></div></form> : <form onSubmit={handleSubmit} className="auth-form"><label><span>School name</span><input value={schoolName} onChange={(event) => setSchoolName(event.target.value)} placeholder="Northstar Science Academy" /></label><label><span>Location</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Accra, Ghana" /></label><label><span>Contact email</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="school@domain.com" /></label><div className="auth-actions"><button type="button" className="button button--outline" onClick={onCancel}>Back</button><button type="submit" className="button button--primary">Submit request</button></div></form>}</div></div>;
+
+  return <div className="auth-screen"><div className="auth-panel"><div className="auth-badge">SECURE PORTAL</div><h1>{mode === 'register' ? 'Register' : 'Sign in'}</h1><p>{mode === 'register' ? 'Create a learning account for your student, teacher, or school-admin role.' : 'Access the protected classroom dashboard for your assigned role.'}</p><div className="auth-mode-switcher"><button type="button" className={mode === 'signin' ? 'active' : ''} onClick={() => setMode('signin')}>Sign in</button><button type="button" className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>Register</button></div>
+      <div className="auth-role-switcher"><button type="button" className={accountType === 'student' ? 'active' : ''} onClick={() => setAccountType('student')}>Student</button><button type="button" className={accountType === 'teacher' ? 'active' : ''} onClick={() => setAccountType('teacher')}>Teacher</button><button type="button" className={accountType === 'school-admin' ? 'active' : ''} onClick={() => setAccountType('school-admin')}>School admin</button></div>
+      <form onSubmit={handleSubmit} className="auth-form">
+        {mode === 'register' && accountType === 'school-admin' ? <>
+          <label><span>School name</span><input value={schoolName} onChange={(event) => setSchoolName(event.target.value)} placeholder="Northstar Science Academy" /></label>
+          <label><span>School email</span><input type="email" value={schoolEmail || email} onChange={(event) => setSchoolEmail(event.target.value)} placeholder="admin@school.edu" /></label>
+          <label><span>Password</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+          <label><span>Confirm password</span><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></label>
+          <label><span>Address / location</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Accra, Ghana" /></label>
+          <label><span>Access pack</span><select value={plan} onChange={(event) => setPlan(event.target.value)}><option value="starter">Starter pack</option><option value="premium">Premium pack</option><option value="full">Full access</option></select></label>
+        </> : <>
+          {mode === 'register' && <label><span>Email</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></label>}
+          {mode === 'signin' && <label><span>Email</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /></label>}
+          {mode === 'register' ? <><label><span>Password</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label><label><span>Confirm password</span><input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></label></> : <><label><span>Password</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label></>}
+          <label><span>School access code</span><input value={accessCode} onChange={(event) => setAccessCode(event.target.value)} placeholder="LABQUEST-STUDENT" /></label>
+        </>}
+        {mode === 'signin' && <div className="auth-inline-note">Select your role before signing in and use the matching access code.</div>}
+        <div className="auth-actions"><button type="button" className="button button--outline" onClick={onCancel}>Back</button><button type="submit" className="button button--primary">{mode === 'register' ? 'Register' : 'Sign in'}</button></div>
+      </form></div></div>;
 }
 
 function mergeAssessments(current, incoming, submissions = []) {

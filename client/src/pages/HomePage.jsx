@@ -26,7 +26,8 @@ export default function HomePage({ onOpenDashboard }) {
         <a href="#schools">For schools</a>
       </nav>
       <div className="landing-nav-actions">
-        <button type="button" className="landing-dashboard-tab" onClick={() => onOpenDashboard('student')}>Secure workspace <ArrowUpRight size={16} /></button>
+        <button type="button" className="landing-secondary" onClick={() => onOpenDashboard('student')}>Sign in</button>
+        <button type="button" className="landing-dashboard-tab" onClick={() => onOpenDashboard('student')}>Register <ArrowUpRight size={16} /></button>
       </div>
     </header>
 

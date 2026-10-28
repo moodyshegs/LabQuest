@@ -32,6 +32,26 @@ This project is ready for a Render web service using the included `render.yaml` 
 
 The service health check points at `/api/health`, and the app is designed to serve the Vite build from the Express server in production.
 
+### Environment variables for Render
+
+This app supports two production database modes:
+
+- MySQL (recommended for Render):
+  - `DATABASE_TYPE=mysql`
+  - `DATABASE_URL=mysql://user:password@host:3306/labquest`
+  - use a managed MySQL service such as PlanetScale, Railway, or a Render MySQL database
+
+- SQLite (simple file-based option):
+  - `DATABASE_TYPE=sqlite`
+  - `DATABASE_PATH=/var/data/labquest.sqlite`
+  - keep the disk mount from `render.yaml` so the file persists between deploys
+
+Common values for all deployments:
+
+- `SESSION_SECRET` — generate a secure random string in Render
+- `PORT` — Render sets this automatically, but the config also includes `10000` as a fallback
+- `NODE_ENV=production`
+
 ## Prototype boundary
 
 The role switcher and sample learners demonstrate the user experience; they are not authentication or authorization. School-code joining is not verified, and exam proctoring is not active. Do not enter real student information or use this prototype for a real school until identity, role checks, school-tenancy enforcement, production assessment security, and secure file-upload authorization are implemented. The practical resource library is a visual placeholder; file uploads and private resource delivery are not connected. In-app alerts are not email delivery. The managed database is shared across development and production, so current demo records persist there.

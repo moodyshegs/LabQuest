@@ -1,7 +1,7 @@
 import express from 'express';
 import session from 'express-session';
 import { createServer as createViteServer } from 'vite';
-import { demoIds, initializeDatabase, query } from './db.js';
+import { authenticateUser, approveSchoolAccess, createSchoolAccessRequest, demoIds, initializeDatabase, listSchools, query, registerUser } from './db.js';
 import { sampleAlerts, sampleAssessments, sampleClasses, sampleMembers, samplePracticals, sampleSchool, sampleSubmissionQueue } from './sample-data.js';
 
 const app = express();
@@ -57,15 +57,32 @@ const requireRole = (roles) => (req, res, next) => {
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, database: Boolean(process.env.DATABASE_URL) }));
 
-app.post('/api/auth/login', (req, res) => {
-  const email = String(req.body?.email || '').trim().toLowerCase();
-  const password = String(req.body?.password || '');
-  const user = mockUsers[email];
-  if (!user || user.password !== password) {
-    return res.status(401).json({ ok: false, error: 'Invalid credentials.' });
+app.post('/api/auth/register', (req, res) => {
+  try {
+    const payload = { ...req.body };
+    const result = registerUser(payload);
+    return res.json(result);
+  } catch (error) {
+    return res.status(400).json({ ok: false, error: error.message || 'Registration failed.' });
   }
-  req.session.user = { id: user.id, email: user.email, name: user.name, role: user.role };
-  return res.json({ ok: true, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+});
+
+app.post('/api/auth/login', (req, res) => {
+  try {
+    const { email, password, role, accessCode } = req.body || {};
+    const user = authenticateUser({ email, password, role, accessCode });
+    req.session.user = { ...user, packagePlan: user.packagePlan || 'starter' };
+    return res.json({ ok: true, user: { id: user.id, email: user.email, name: user.name, role: user.role, schoolName: user.schoolName, location: user.location, accessCode: user.accessCode, packagePlan: user.packagePlan || 'starter' } });
+  } catch (error) {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = String(req.body?.password || '');
+    const user = mockUsers[email];
+    if (user && user.password === password) {
+      req.session.user = { id: user.id, email: user.email, name: user.name, role: user.role };
+      return res.json({ ok: true, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+    }
+    return res.status(401).json({ ok: false, error: error.message || 'Invalid credentials.' });
+  }
 });
 
 app.get('/api/auth/me', (req, res) => {
@@ -77,6 +94,29 @@ app.get('/api/auth/me', (req, res) => {
 
 app.post('/api/auth/logout', (req, res) => {
   req.session.destroy(() => res.json({ ok: true }));
+});
+
+app.post('/api/schools/request', (req, res) => {
+  try {
+    const request = createSchoolAccessRequest(req.body || {});
+    return res.json({ ok: true, request, message: 'School request received and queued for approval.' });
+  } catch (error) {
+    return res.status(400).json({ ok: false, error: error.message || 'Unable to create the school request.' });
+  }
+});
+
+app.get('/api/schools', requireAuth, (_req, res) => {
+  const schools = listSchools();
+  return res.json({ ok: true, schools });
+});
+
+app.post('/api/admin/schools/approve', requireAuth, requireRole(['admin']), (req, res) => {
+  try {
+    const approved = approveSchoolAccess(req.body || {});
+    return res.json({ ok: true, school: approved, message: 'School access approved and code activated.' });
+  } catch (error) {
+    return res.status(400).json({ ok: false, error: error.message || 'Unable to approve the school access request.' });
+  }
 });
 
 app.post('/api/alerts/:id/read', requireAuth, async (req, res) => {

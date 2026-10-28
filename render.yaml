@@ -2,7 +2,7 @@ services:
   - type: web
     name: labquest-science-learning
     env: node
-    plan: free
+    plan: starter
     region: oregon
     rootDir: .
     buildCommand: npm install --include=dev && npm run build
@@ -12,3 +12,17 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 10000
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: DATABASE_TYPE
+        value: mysql
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_PATH
+        value: /var/data/labquest.sqlite
+    disk:
+      name: labquest-data
+      mountPath: /var/data
+      sizeGB: 1

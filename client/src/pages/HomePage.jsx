@@ -25,8 +25,8 @@ export default function HomePage({ onOpenDashboard }) {
         <a href="#subjects">Subjects</a>
         <a href="#schools">For schools</a>
       </nav>
-      <div className="landing-nav-actions" aria-hidden="true">
-        <span className="landing-dashboard-tab landing-dashboard-tab--ghost">Secure workspace</span>
+      <div className="landing-nav-actions">
+        <button type="button" className="landing-dashboard-tab" onClick={() => onOpenDashboard('student')}>Secure workspace <ArrowUpRight size={16} /></button>
       </div>
     </header>
 
@@ -37,14 +37,15 @@ export default function HomePage({ onOpenDashboard }) {
           <h1 id="landing-title">Let every Nigerian classroom become a place of <em>discovery.</em></h1>
           <p>LabQuest brings practical science within reach through guided investigations, interactive simulations and learning tools for senior secondary students—even where a dedicated laboratory is not available.</p>
           <div className="landing-actions">
-            <a className="landing-primary" href="#subjects">Explore the curriculum <ArrowRight size={17} /></a>
+            <button type="button" className="landing-primary" onClick={() => onOpenDashboard('student')}>Open secure workspace <ArrowRight size={17} /></button>
+            <a className="landing-primary landing-primary--secondary" href="#subjects">Explore the curriculum</a>
           </div>
           <div className="landing-demo-note"><span className="landing-demo-dot" /><span><strong>Secure access</strong> · Sign in to unlock the protected learning workspace.</span></div>
           <div className="landing-audience"><Users size={16} /><span>For students, teachers and school communities</span></div>
         </div>
         <div className="landing-hero-visual">
           <div className="landing-image-frame">
-            <img src="/manus-storage/async-images/D7adgSairpvV1fThVxD3rp/image-1.webp" alt="Nigerian senior secondary students exploring plant, soil, water and circuit investigations together in a classroom" />
+            <img src="https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=1200&q=80" alt="Students exploring science and practical experiments in a classroom" />
             <span className="landing-image-label"><FlaskConical size={13} /> SCIENCE IN ACTION</span>
             <div className="landing-image-caption"><span className="landing-caption-spark">✳</span><div><strong>Curiosity belongs in every classroom.</strong><small>Practical thinking starts with a question.</small></div></div>
           </div>
@@ -70,7 +71,7 @@ export default function HomePage({ onOpenDashboard }) {
         <div className="landing-school-copy"><span className="landing-eyebrow">MADE FOR SCHOOL COMMUNITIES</span><h2 id="school-title">A practical learning journey that meets schools <em>where they are.</em></h2><p>When laboratory facilities are limited, students can still rehearse a method, explore a safe virtual practical and build the habit of reasoning from evidence. LabQuest is designed to complement teacher-led learning and supervised hands-on work.</p><div className="landing-school-actions"><a className="landing-light-button" href="#approach">See the learning journey <ArrowRight size={16} /></a><span><Users size={15} /> For educators and school leaders</span></div></div>
       </section>
 
-      <section className="landing-final-cta"><span className="landing-eyebrow">SEE LABQUEST IN ACTION</span><h2>Bring science to life with guided learning.</h2><p>Explore the classroom workspace, complete practicals and review progress in a secure, vibrant learning environment.</p><div className="landing-final-actions"><a className="landing-primary" href="#subjects">View the curriculum <ArrowRight size={17} /></a></div><small>Protected access keeps the real classroom workspace separate from the public landing experience.</small></section>    </main>
+      <section className="landing-final-cta"><span className="landing-eyebrow">SEE LABQUEST IN ACTION</span><h2>Bring science to life with guided learning.</h2><p>Explore the classroom workspace, complete practicals and review progress in a secure, vibrant learning environment.</p><div className="landing-final-actions"><button type="button" className="landing-primary" onClick={() => onOpenDashboard('student')}>Enter secure workspace <ArrowRight size={17} /></button></div><small>Protected access keeps the real classroom workspace separate from the public landing experience.</small></section>    </main>
 
     <footer className="landing-footer"><a href="#top" className="landing-footer-brand" aria-label="Back to top"><BrandMark /></a><p>Science in action, for every learner.</p><a href="#subjects">Curriculum <ArrowUpRight size={14} /></a><span>© LabQuest · Secure learning workspace</span></footer>  </div>;
 }

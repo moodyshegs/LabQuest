@@ -1,11 +1,30 @@
 import express from 'express';
+import session from 'express-session';
 import { createServer as createViteServer } from 'vite';
 import { demoIds, initializeDatabase, query } from './db.js';
 import { sampleAlerts, sampleAssessments, sampleClasses, sampleMembers, samplePracticals, sampleSchool, sampleSubmissionQueue } from './sample-data.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
+const SESSION_SECRET = process.env.SESSION_SECRET || 'labquest-demo-secret';
+const mockUsers = {
+  'admin@labquest.edu.ng': { id: 'user-admin', email: 'admin@labquest.edu.ng', name: 'LabQuest Admin', role: 'admin', password: 'LabQuest2026!' },
+  'teacher@labquest.edu.ng': { id: 'user-teacher', email: 'teacher@labquest.edu.ng', name: 'Mrs. Esi Boateng', role: 'teacher', password: 'LabQuest2026!' },
+  'student@labquest.edu.ng': { id: 'user-student', email: 'student@labquest.edu.ng', name: 'Amara Owusu', role: 'student', password: 'LabQuest2026!' },
+};
+
 app.use(express.json({ limit: '256kb' }));
+app.use(session({
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 1000 * 60 * 60 * 8,
+  },
+}));
 
 const fallbackBootstrap = () => ({
   connected: false,
@@ -22,9 +41,45 @@ const fallbackBootstrap = () => ({
   progress: { practicalsCompleted: 18, totalPracticals: 24, points: 740, streakDays: 6 },
 });
 
+const isAuthenticated = (req) => Boolean(req.session?.user);
+const requireAuth = (req, res, next) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ ok: false, error: 'Authentication required.' });
+  }
+  return next();
+};
+const requireRole = (roles) => (req, res, next) => {
+  if (!isAuthenticated(req) || !roles.includes(req.session.user.role)) {
+    return res.status(403).json({ ok: false, error: 'Access denied.' });
+  }
+  return next();
+};
+
 app.get('/api/health', (_req, res) => res.json({ ok: true, database: Boolean(process.env.DATABASE_URL) }));
 
-app.post('/api/alerts/:id/read', async (req, res) => {
+app.post('/api/auth/login', (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const password = String(req.body?.password || '');
+  const user = mockUsers[email];
+  if (!user || user.password !== password) {
+    return res.status(401).json({ ok: false, error: 'Invalid credentials.' });
+  }
+  req.session.user = { id: user.id, email: user.email, name: user.name, role: user.role };
+  return res.json({ ok: true, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+});
+
+app.get('/api/auth/me', (req, res) => {
+  if (!isAuthenticated(req)) {
+    return res.status(401).json({ ok: false, error: 'Not signed in.' });
+  }
+  return res.json({ ok: true, user: req.session.user });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  req.session.destroy(() => res.json({ ok: true }));
+});
+
+app.post('/api/alerts/:id/read', requireAuth, async (req, res) => {
   const alertId = Number(req.params.id);
   if (!Number.isInteger(alertId)) return res.status(400).json({ error: 'Invalid alert ID.' });
   try {
@@ -35,7 +90,7 @@ app.post('/api/alerts/:id/read', async (req, res) => {
   }
 });
 
-app.get('/api/bootstrap', async (_req, res) => {
+app.get('/api/bootstrap', requireAuth, async (req, res) => {
   try {
     if (!demoIds.schoolId) return res.json(fallbackBootstrap());
     const [[school]] = await query('SELECT name, school_code AS schoolCode, location FROM schools WHERE id = ?', [demoIds.schoolId]);
@@ -70,7 +125,7 @@ app.get('/api/bootstrap', async (_req, res) => {
   }
 });
 
-app.post('/api/practicals/:slug/complete', async (req, res) => {
+app.post('/api/practicals/:slug/complete', requireAuth, async (req, res) => {
   const slug = String(req.params.slug || '').slice(0, 100);
   try {
     const [[practical]] = await query('SELECT id, title, points FROM practicals WHERE slug = ?', [slug]);
@@ -86,7 +141,7 @@ app.post('/api/practicals/:slug/complete', async (req, res) => {
   }
 });
 
-app.post('/api/assessments', async (req, res) => {
+app.post('/api/assessments', requireAuth, requireRole(['teacher', 'admin']), async (req, res) => {
   const { title, subject, kind = 'test', classroomName = 'SS2 Science A', instructions = '', dueAt = null, timed = false, durationMinutes = 0 } = req.body || {};
   if (!String(title || '').trim() || !String(subject || '').trim()) return res.status(400).json({ error: 'Assessment title and subject are required.' });
   const rawQuestions = Array.isArray(req.body?.questions) ? req.body.questions : [];
@@ -119,7 +174,7 @@ app.post('/api/assessments', async (req, res) => {
   }
 });
 
-app.post('/api/assessments/:id/submissions', async (req, res) => {
+app.post('/api/assessments/:id/submissions', requireAuth, async (req, res) => {
   const assessmentId = Number(req.params.id);
   const answers = req.body?.answers && typeof req.body.answers === 'object' ? req.body.answers : {};
   try {
@@ -145,7 +200,7 @@ app.post('/api/assessments/:id/submissions', async (req, res) => {
   }
 });
 
-app.post('/api/submissions/:id/review', async (req, res) => {
+app.post('/api/submissions/:id/review', requireAuth, requireRole(['teacher', 'admin']), async (req, res) => {
   const submissionId = Number(req.params.id);
   const score = Math.max(0, Math.min(100, Number(req.body?.score) || 0));
   const feedback = String(req.body?.feedback || '').slice(0, 5000);
@@ -159,7 +214,7 @@ app.post('/api/submissions/:id/review', async (req, res) => {
   }
 });
 
-app.post('/api/schools', async (req, res) => {
+app.post('/api/schools', requireAuth, requireRole(['admin']), async (req, res) => {
   const name = String(req.body?.name || '').trim().slice(0, 180);
   const location = String(req.body?.location || '').trim().slice(0, 180);
   if (name.length < 3) return res.status(400).json({ error: 'Enter a school name with at least three characters.' });

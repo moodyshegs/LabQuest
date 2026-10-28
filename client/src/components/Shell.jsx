@@ -67,17 +67,18 @@ export function Sidebar({ active, role, setRole, setActive, school, onSchool, mo
   </>;
 }
 
-export function Header({ role, school, alerts, onNotifications, onSchool, onMenu, onCreate, onHome }) {
+export function Header({ role, school, alerts, onNotifications, onSchool, onMenu, onCreate, onHome, onLogout }) {
   const now = new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date());
   return <header className="topbar">
     <button className="icon-button menu-toggle" onClick={onMenu} aria-label="Open menu"><Menu size={20} /></button>
     <div className="topbar-school"><span className="topbar-date">{now}</span><span className="topbar-divider">/</span><button onClick={onSchool}>{school?.name || 'Northstar Academy'} <ChevronDown size={14} /></button></div>
     <div className="topbar-actions">
       <button className="home-return-link" onClick={onHome}><Home size={14} /> LabQuest home</button>
-      <span className="demo-pill"><i /> Demo workspace</span>
+      <span className="demo-pill"><i /> Secure workspace</span>
       {role === 'teacher' && <button className="button button--primary button--small topbar-create" onClick={onCreate}><Plus size={16} /> Create activity</button>}
       {role === 'admin' && <button className="button button--primary button--small topbar-create" onClick={onCreate}><Plus size={16} /> Launch activity</button>}
       <button className="notification-button" aria-label="Notifications" onClick={onNotifications}><Bell size={19} />{alerts?.some((item) => item.unread) && <i />}</button>
+      {onLogout && <button className="logout-button" onClick={onLogout} aria-label="Log out"><LogOut size={17} /></button>}
       <Avatar initials={role === 'teacher' ? 'EB' : role === 'admin' ? 'MO' : 'AO'} tone={role === 'teacher' ? 'gold' : role === 'admin' ? 'blue' : 'green'} />
     </div>
   </header>;

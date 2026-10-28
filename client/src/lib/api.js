@@ -14,6 +14,9 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  me: () => request('/api/auth/me'),
+  login: (email, password) => request('/api/auth/login', { method: 'POST', body: { email, password } }),
+  logout: () => request('/api/auth/logout', { method: 'POST', body: {} }),
   bootstrap: () => request('/api/bootstrap'),
   markAlertRead: (id) => request(`/api/alerts/${encodeURIComponent(id)}/read`, { method: 'POST', body: {} }),
   completePractical: (slug) => request(`/api/practicals/${encodeURIComponent(slug)}/complete`, { method: 'POST', body: {} }),

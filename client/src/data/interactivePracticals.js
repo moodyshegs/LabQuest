@@ -1,11 +1,36 @@
 const baseSafety = 'This is a guided virtual practical. Do not handle chemicals, heat, electricity, living specimens or unfamiliar materials without a qualified teacher in a properly equipped laboratory.';
+const scienceImageMap = {
+  Physics: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=900&q=80',
+  Chemistry: 'https://images.unsplash.com/photo-1532187643603-ba119ca4109e?auto=format&fit=crop&w=900&q=80',
+  Biology: 'https://images.unsplash.com/photo-1536147116438-62679c56f3d5?auto=format&fit=crop&w=900&q=80',
+  Agriculture: 'https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=900&q=80',
+  default: 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=80',
+};
+const scienceVideoMap = {
+  Physics: 'https://videos.pexels.com/video-files/3195394/3195394-hd_1920_1080.mp4',
+  Chemistry: 'https://videos.pexels.com/video-files/3195394/3195394-hd_1920_1080.mp4',
+  Biology: 'https://videos.pexels.com/video-files/853889/853889-hd_1920_1080.mp4',
+  Agriculture: 'https://videos.pexels.com/video-files/3195394/3195394-hd_1920_1080.mp4',
+  default: 'https://videos.pexels.com/video-files/3195394/3195394-hd_1920_1080.mp4',
+};
+
+const toApparatusList = (subject, apparatus) => (apparatus || ['Interactive control panel', 'Virtual measurement display', 'Live graph and observation table']).map((item, index) => {
+  const value = typeof item === 'string' ? item : item.name;
+  const image = typeof item === 'string'
+    ? (scienceImageMap[subject] || scienceImageMap.default)
+    : (item.image || scienceImageMap[subject] || scienceImageMap.default);
+  return { name: value, image, id: `${subject}-${index}-${String(value).replace(/\s+/g, '-').toLowerCase()}` };
+});
 
 function practical({ subject, slug, title, summary, icon, tag, points = 60, duration = '20 min', model, fields, apparatus, steps, observations, conclusion, question }) {
+  const apparatusList = toApparatusList(subject, apparatus);
   return {
     slug, subject, title, summary, icon, tag, points, duration,
+    image: scienceImageMap[subject] || scienceImageMap.default,
+    video: scienceVideoMap[subject] || scienceVideoMap.default,
     details: {
       intro: `Change the inputs, watch the model respond and use the evidence to explain ${title.toLowerCase()}.`,
-      apparatus: apparatus || ['Interactive control panel', 'Virtual measurement display', 'Live graph and observation table'],
+      apparatus: apparatusList,
       safety: [baseSafety, 'Record only the values and observations generated in this virtual workspace.'],
       steps: steps || ['Read the investigation question.', 'Adjust one input at a time and predict the outcome.', 'Compare the live visual, measurements and graph.', 'Record a pattern and explain it with evidence.'],
       observations: observations || 'The visual model, measurements and graph update immediately when an input changes.',

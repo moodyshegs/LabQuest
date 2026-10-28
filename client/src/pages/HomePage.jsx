@@ -16,7 +16,7 @@ const steps = [
   { number: '03', title: 'Make sense of evidence', copy: 'Record observations, explain results and let teachers follow progress with class activities.', icon: Microscope },
 ];
 
-export default function HomePage({ onOpenDashboard }) {
+export default function HomePage({ onOpenDashboard, onOpenSignIn }) {
   return <div className="landing-page" id="top">
     <header className="landing-nav">
       <a className="landing-brand" href="#top" aria-label="LabQuest home"><BrandMark /></a>
@@ -25,6 +25,9 @@ export default function HomePage({ onOpenDashboard }) {
         <a href="#subjects">Subjects</a>
         <a href="#schools">For schools</a>
       </nav>
+      <div className="landing-nav-actions">
+        <button type="button" className="landing-nav-signin" onClick={onOpenSignIn}>Sign in</button>
+      </div>
     </header>
 
     <main>

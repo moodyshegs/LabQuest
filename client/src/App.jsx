@@ -180,7 +180,7 @@ export default function App() {
     }
 
     setRegisteredUsers((current) => [{ id: response.user.id, email: response.user.email, password: normalizedPassword, role: response.user.role, accessCode: response.user.accessCode, name: response.user.name, schoolName: response.user.schoolName, location: response.user.location }, ...current.filter((item) => item.email !== normalizedEmail)]);
-    notify('Registration received', `${normalizedRole === 'admin' ? 'School admin' : normalizedRole === 'teacher' ? 'Teacher' : 'Student'} account created. Please sign in with your email and access code.`, 'success');
+    notify('Check your email for your access code', `${normalizedRole === 'admin' ? 'School admin' : normalizedRole === 'teacher' ? 'Teacher' : 'Student'} registration is complete. If you already have an access code, sign in below to continue.`, 'success');
     return true;
   };
 
@@ -338,17 +338,23 @@ export default function App() {
     return <AuthScreen onSubmit={login} onRegister={registerAccount} onCancel={() => { window.history.pushState({}, '', '/'); setView('landing'); }} />;
   }
 
-  if (view === 'landing') return <HomePage onOpenDashboard={(nextRole = 'student') => {
-    if (!auth) {
+  if (view === 'landing') return <HomePage
+    onOpenDashboard={(nextRole = 'student') => {
+      if (!auth) {
+        window.history.pushState({}, '', '/admin');
+        setView('admin');
+        return;
+      }
+      setRole(nextRole);
+      setAppOwnerMode(false);
+      setView('dashboard');
+      window.history.pushState({}, '', '/');
+    }}
+    onOpenSignIn={() => {
       window.history.pushState({}, '', '/admin');
       setView('admin');
-      return;
-    }
-    setRole(nextRole);
-    setAppOwnerMode(false);
-    setView('dashboard');
-    window.history.pushState({}, '', '/');
-  }} />;
+    }}
+  />;
   const studentClass = bootstrap.studentClassName || bootstrap.classes?.[0]?.name;
   const visibleAssessments = authorizedRole === 'teacher' || authorizedRole === 'admin' ? assessments : assessments.filter((item) => item.classroomName === studentClass || (!bootstrap.connected && !item.classroomName));
   const page = appOwnerMode || authorizedRole === 'admin'
@@ -385,6 +391,7 @@ function AuthScreen({ onSubmit, onRegister, onCancel }) {
   const [schoolEmail, setSchoolEmail] = useState('');
   const [location, setLocation] = useState('');
   const [plan, setPlan] = useState('starter');
+  const [registrationNotice, setRegistrationNotice] = useState(false);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -402,16 +409,19 @@ function AuthScreen({ onSubmit, onRegister, onCancel }) {
       });
       if (ok) {
         setMode('signin');
+        setRegistrationNotice(true);
         setPassword('');
         setConfirmPassword('');
       }
       return;
     }
+    setRegistrationNotice(false);
     onSubmit({ email, password, accessCode, role: accountType });
   };
 
-  return <div className="auth-screen"><div className="auth-panel"><div className="auth-badge">SECURE PORTAL</div><h1>{mode === 'register' ? 'Register' : 'Sign in'}</h1><p>{mode === 'register' ? 'Create a learning account for your student, teacher, or school-admin role.' : 'Access the protected classroom dashboard for your assigned role.'}</p><div className="auth-mode-switcher"><button type="button" className={mode === 'signin' ? 'active' : ''} onClick={() => setMode('signin')}>Sign in</button><button type="button" className={mode === 'register' ? 'active' : ''} onClick={() => setMode('register')}>Register</button></div>
+  return <div className="auth-screen"><div className="auth-panel"><div className="auth-badge">SECURE PORTAL</div><h1>{mode === 'register' ? 'Register' : 'Sign in'}</h1><p>{mode === 'register' ? 'Create a learning account for your student, teacher, or school-admin role.' : 'Access the protected classroom dashboard for your assigned role.'}</p><div className="auth-mode-switcher"><button type="button" className={mode === 'signin' ? 'active' : ''} onClick={() => { setMode('signin'); setRegistrationNotice(false); }}>Sign in</button><button type="button" className={mode === 'register' ? 'active' : ''} onClick={() => { setMode('register'); setRegistrationNotice(false); }}>Register</button></div>
       <div className="auth-role-switcher"><button type="button" className={accountType === 'student' ? 'active' : ''} onClick={() => setAccountType('student')}>Student</button><button type="button" className={accountType === 'teacher' ? 'active' : ''} onClick={() => setAccountType('teacher')}>Teacher</button><button type="button" className={accountType === 'school-admin' ? 'active' : ''} onClick={() => setAccountType('school-admin')}>School admin</button></div>
+      {registrationNotice && mode === 'signin' && <div className="auth-inline-note auth-inline-note--success" style={{ marginBottom: '1rem' }}>Check your email for your access code. Your registration is complete — sign in below when you are ready.</div>}
       <form onSubmit={handleSubmit} className="auth-form">
         {mode === 'register' && accountType === 'school-admin' ? <>
           <label><span>School name</span><input value={schoolName} onChange={(event) => setSchoolName(event.target.value)} placeholder="Northstar Science Academy" /></label>

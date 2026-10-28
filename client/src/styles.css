@@ -53,6 +53,8 @@
 .landing-links a{color:#65766b;text-decoration:none;font-size:12px;font-weight:600;transition:color .18s ease}
 .landing-links a:hover{color:var(--landing-green)}
 .landing-nav-actions{display:flex;align-items:center;gap:12px}
+.landing-nav-signin{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border:1px solid rgba(20,74,60,.12);border-radius:10px;background:#fff;color:#214a40;font-size:12px;font-weight:700;box-shadow:0 10px 20px rgba(26,101,88,.06);transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
+.landing-nav-signin:hover{transform:translateY(-1px);box-shadow:0 12px 22px rgba(26,101,88,.09);background:#f4faf7}
 .landing-dashboard-tab,.landing-primary,.landing-light-button,.landing-developer-tab,.landing-owner-tab{display:inline-flex;align-items:center;justify-content:center;gap:10px;border:0;border-radius:10px;font-size:12px;font-weight:700;transition:transform .18s ease,box-shadow .18s ease,background .18s ease}
 .landing-dashboard-tab{min-height:42px;padding:0 16px;background:#1a6558;color:#fff;box-shadow:0 6px 15px rgba(26,101,88,.15)}
 .landing-developer-tab,.landing-owner-tab{min-height:42px;padding:0 15px;background:#f0f7ee;color:#224d42;border:1px solid rgba(28,76,65,.12)}

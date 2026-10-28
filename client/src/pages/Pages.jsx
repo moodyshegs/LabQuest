@@ -45,16 +45,19 @@ export function OwnerDashboardPage({ schools = [], onBack, onGrant }) {
     return accumulator;
   }, {});
 
+  const pendingRequests = schools.filter((school) => school.status === 'Pending');
+  const approvedSchools = schools.filter((school) => school.status === 'Active');
+
   return <div className="page-wrap owner-page">
     <PageHeading
       eyebrow="APP OWNER CONSOLE"
       title={<>School access and platform oversight<span className="wave-mark">✳</span></>}
-      subcopy="Monitor school onboarding, control access codes, and review platform usage from a single operational view."
+      subcopy="Review school requests, generate access codes, and approve secure learning access without exposing the dashboard to the public."
       action={<button className="button button--primary" onClick={onBack}><ArrowLeft size={16} /> Back to landing</button>}
     />
 
     <section className="stat-grid owner-stats">
-      <StatCard label="Total schools" value={`${totalSchools}`} note="Registered and pending access" icon={School} tone="mint" trend="+12%" />
+      <StatCard label="Total schools" value={`${totalSchools}`} note="Registered and pending access" icon={Users} tone="mint" trend="+12%" />
       <StatCard label="Active access" value={`${activeSchools}`} note="Approved school accounts" icon={CheckCircle2} tone="gold" />
       <StatCard label="Pending review" value={`${pendingSchools}`} note="Awaiting approval" icon={Clock3} tone="blue" />
       <StatCard label="Access mix" value={`${accessBreakdown['school-admin'] || 0} admin`} note={`${accessBreakdown.teacher || 0} teacher · ${accessBreakdown.student || 0} student`} icon={Users} tone="coral" />
@@ -63,47 +66,40 @@ export function OwnerDashboardPage({ schools = [], onBack, onGrant }) {
     <section className="owner-layout">
       <div className="panel-card owner-panel">
         <div className="section-heading compact">
-          <div><span className="eyebrow">ACCESS CONTROL</span><h2>Approved schools</h2></div>
-          <button className="more-link" onClick={() => onGrant ? onGrant({ schoolName: 'Northstar Science Academy', schoolCode: 'LABQUESTDEV', accessType: 'school-admin' }) : undefined}>Grant access</button>
+          <div><span className="eyebrow">OWNER WORKFLOW</span><h2>School access requests</h2></div>
         </div>
         <div className="owner-table">
-          {schools.map((school) => <div className="owner-row" key={school.id}>
+          {pendingRequests.length === 0 ? <div className="empty-state"><p>No pending requests right now.</p></div> : pendingRequests.map((school) => <div className="owner-row" key={school.id}>
             <div className="owner-school-meta">
               <strong>{school.name}</strong>
               <small>{school.region}</small>
             </div>
             <div className="owner-detail"><span>Code</span><strong>{school.code}</strong></div>
             <div className="owner-detail"><span>Access</span><strong>{school.accessType}</strong></div>
-            <div className="owner-detail"><span>Status</span><strong className={`status-pill status-pill--${school.status === 'Active' ? 'active' : 'pending'}`}>{school.status}</strong></div>
-            <div className="owner-detail"><span>Members</span><strong>{school.members}</strong></div>
-            <div className="owner-detail"><span>Last seen</span><strong>{school.lastAccess}</strong></div>
+            <div className="owner-detail"><span>Status</span><strong className="status-pill status-pill--pending">{school.status}</strong></div>
+            <div className="owner-detail"><span>Contact</span><strong>{school.contactEmail || 'Not provided'}</strong></div>
+            <button className="button button--primary button--small" onClick={() => onGrant ? onGrant({ schoolName: school.name, schoolCode: school.code, accessType: school.accessType }) : undefined}>Approve</button>
           </div>)}
         </div>
       </div>
 
-      <div className="panel-card owner-briefing">
+      <div className="panel-card owner-panel">
         <div className="section-heading compact">
-          <div><span className="eyebrow">PLATFORM OVERVIEW</span><h2>Platform pulse</h2></div>
+          <div><span className="eyebrow">ACTIVE SCHOOLS</span><h2>Approved access</h2></div>
         </div>
-        <div className="owner-briefing-list">
-          <div>
-            <span>Schools online</span>
-            <strong>86%</strong>
-          </div>
-          <div>
-            <span>Activities launched</span>
-            <strong>1,292</strong>
-          </div>
-          <div>
-            <span>Avg. session quality</span>
-            <strong>92/100</strong>
-          </div>
-          <div>
-            <span>Support tickets</span>
-            <strong>18</strong>
-          </div>
+        <div className="owner-table">
+          {approvedSchools.length === 0 ? <div className="empty-state"><p>No approved schools yet.</p></div> : approvedSchools.map((school) => <div className="owner-row" key={school.id}>
+            <div className="owner-school-meta">
+              <strong>{school.name}</strong>
+              <small>{school.region}</small>
+            </div>
+            <div className="owner-detail"><span>Code</span><strong>{school.code}</strong></div>
+            <div className="owner-detail"><span>Access</span><strong>{school.accessType}</strong></div>
+            <div className="owner-detail"><span>Status</span><strong className="status-pill status-pill--active">{school.status}</strong></div>
+            <div className="owner-detail"><span>Members</span><strong>{school.members}</strong></div>
+            <div className="owner-detail"><span>Last seen</span><strong>{school.lastAccess}</strong></div>
+          </div>)}
         </div>
-        <button className="button button--outline button--wide" onClick={() => onGrant ? onGrant({ schoolName: 'Lighthouse Girls College', schoolCode: 'LABQUEST-DEV', accessType: 'teacher' }) : undefined}>Approve next school</button>
       </div>
     </section>
   </div>;

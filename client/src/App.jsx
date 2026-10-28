@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AlertCircle, Check, X } from 'lucide-react';
 import { Sidebar, Header, NotificationPanel } from './components/Shell.jsx';
 import { SchoolDialog, CreateAssessmentDialog, DeveloperAccessDialog } from './components/Dialogs.jsx';
-import { DashboardPage, PracticalsPage, PracticalSessionPage, AssessmentsPage, QuizExperience, ProgressPage, ClassPage, ReviewPage } from './pages/Pages.jsx';
+import { DashboardPage, PracticalsPage, PracticalSessionPage, AssessmentsPage, QuizExperience, ProgressPage, ClassPage, ReviewPage, OwnerDashboardPage } from './pages/Pages.jsx';
 import HomePage from './pages/HomePage.jsx';
 import { api } from './lib/api.js';
 import { assessmentCatalog, initialAlerts, initialSubmissions, practicalCatalog } from './data/content.js';
@@ -106,6 +106,37 @@ export default function App() {
     setView(isAdminRoute ? 'admin' : route);
   };
 
+  const generateAccessCode = (schoolName = 'LABQUEST') => {
+    const prefix = String(schoolName || 'LABQUEST').replace(/[^a-zA-Z0-9]/g, '').slice(0, 5).toUpperCase() || 'LABQ';
+    const numeric = String(Date.now() % 9000 + 1000);
+    return `${prefix}-${numeric}`;
+  };
+
+  const requestSchoolAccess = async ({ schoolName, location, email }) => {
+    const cleanedName = String(schoolName || '').trim();
+    if (!cleanedName) {
+      notify('School request incomplete', 'Enter your school name so the developer can review access.', 'error');
+      return false;
+    }
+
+    const code = generateAccessCode(cleanedName);
+    const request = {
+      id: `request-${Date.now()}`,
+      name: cleanedName,
+      code,
+      accessType: 'school-admin',
+      status: 'Pending',
+      region: String(location || 'Awaiting region').trim() || 'Awaiting region',
+      members: 1,
+      lastAccess: 'Just now',
+      contactEmail: String(email || '').trim() || 'pending@labquest.edu.ng',
+    };
+
+    setOwnerAccess((current) => [request, ...current]);
+    notify('School access requested', `Your request was received. Share access code ${code} with the school admin when approved.`, 'success');
+    return true;
+  };
+
   const notify = (title, message, tone = 'success') => setToast({ title, message, tone });
   const login = async ({ email, password }) => {
     const normalizedEmail = String(email || '').trim().toLowerCase();
@@ -133,17 +164,18 @@ export default function App() {
   };
   const goTo = (nextView) => { setSelectedPractical(null); setSelectedAssessment(null); setView(nextView); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const grantDeveloperAccess = async ({ schoolName, schoolCode, accessType }) => {
-    const accessKey = String(schoolCode || '').trim().toUpperCase();
+    const cleanedName = String(schoolName || '').trim();
+    const accessKey = String(schoolCode || '').trim().toUpperCase() || generateAccessCode(cleanedName);
     const validCodes = new Set(['LABQUESTDEV', 'LABQUEST-DEV', 'LABQUESTADMIN', 'NORTHSTAR2026', 'SCHOOLACCESS']);
     const typeMap = { 'school-admin': 'admin', teacher: 'teacher', student: 'student' };
-    if (!schoolName || !schoolCode || !validCodes.has(accessKey)) {
+    if (!cleanedName || (schoolCode && !validCodes.has(accessKey) && !accessKey.includes('-'))) {
       notify('Access code rejected', 'Use a valid developer access code to authorize a school.', 'error');
       return;
     }
     const nextRole = typeMap[accessType] || 'admin';
     const ownerRecord = {
       id: `school-${Date.now()}`,
-      name: schoolName,
+      name: cleanedName,
       code: accessKey,
       accessType,
       status: 'Active',
@@ -151,12 +183,21 @@ export default function App() {
       members: 40,
       lastAccess: 'Just now',
     };
-    setOwnerAccess((current) => [ownerRecord, ...current.filter((item) => item.name !== schoolName)]);
-    setBootstrap((current) => ({ ...current, school: { ...current.school, name: schoolName, schoolCode: accessKey } }));
+    setOwnerAccess((current) => {
+      const existingIndex = current.findIndex((item) => item.name === cleanedName || item.code === accessKey);
+      const nextList = [...current];
+      if (existingIndex >= 0) {
+        nextList[existingIndex] = { ...nextList[existingIndex], ...ownerRecord, status: 'Active', accessType, code: accessKey, lastAccess: 'Just now' };
+      } else {
+        nextList.unshift(ownerRecord);
+      }
+      return nextList;
+    });
+    setBootstrap((current) => ({ ...current, school: { ...current.school, name: cleanedName, schoolCode: accessKey } }));
     setRole(nextRole);
     setDeveloperDialog(false);
     setView('dashboard');
-    notify('Developer access granted', `${schoolName} has been assigned ${accessType === 'school-admin' ? 'school-admin' : accessType === 'teacher' ? 'teacher' : 'student'} permissions.`, 'success');
+    notify('Developer access granted', `${cleanedName} has been assigned ${accessType === 'school-admin' ? 'school-admin' : accessType === 'teacher' ? 'teacher' : 'student'} permissions. Access code: ${accessKey}.`, 'success');
   };
   const openPractical = (practical) => { const match = practicalCatalog.find((item) => item.slug === practical.slug) || practicalCatalog[0]; setSelectedPractical(match); setSelectedAssessment(null); setView('practical-session'); };
   const startAssessment = (assessment) => { setSelectedAssessment(assessment); setView('quiz'); };
@@ -230,7 +271,7 @@ export default function App() {
   const authorizedRole = auth?.role || role;
 
   if (isAdminRoute && !signedIn) {
-    return <AuthScreen onSubmit={login} onCancel={() => { window.history.pushState({}, '', '/'); setView('landing'); }} />;
+    return <AuthScreen onSubmit={login} onRequestAccess={requestSchoolAccess} onCancel={() => { window.history.pushState({}, '', '/'); setView('landing'); }} />;
   }
 
   if (view === 'landing') return <HomePage onOpenDashboard={(nextRole = 'student') => {
@@ -269,14 +310,21 @@ export default function App() {
   </div>;
 }
 
-function AuthScreen({ onSubmit, onCancel }) {
+function AuthScreen({ onSubmit, onRequestAccess, onCancel }) {
+  const [mode, setMode] = useState('signin');
   const [email, setEmail] = useState('admin@labquest.edu.ng');
   const [password, setPassword] = useState('LabQuest2026!');
+  const [schoolName, setSchoolName] = useState('');
+  const [location, setLocation] = useState('');
   const handleSubmit = (event) => {
     event.preventDefault();
+    if (mode === 'signup') {
+      onRequestAccess({ schoolName, location, email });
+      return;
+    }
     onSubmit({ email, password });
   };
-  return <div className="auth-screen"><div className="auth-panel"><div className="auth-badge">SECURE PORTAL</div><h1>Sign in to LabQuest</h1><p>Access the protected classroom workspace and merged owner/admin console.</p><form onSubmit={handleSubmit} className="auth-form"><label><span>Email</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><label><span>Password</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label><div className="auth-actions"><button type="button" className="button button--outline" onClick={onCancel}>Back</button><button type="submit" className="button button--primary">Sign in</button></div></form></div></div>;
+  return <div className="auth-screen"><div className="auth-panel"><div className="auth-badge">SECURE PORTAL</div><h1>{mode === 'signup' ? 'Request school access' : 'Sign in to LabQuest'}</h1><p>{mode === 'signup' ? 'Register a new school and let the developer review the request before a code is granted.' : 'Access the protected classroom workspace and merged owner/admin console.'}</p><div className="auth-mode-switcher"><button type="button" className={mode === 'signin' ? 'active' : ''} onClick={() => setMode('signin')}>Sign in</button><button type="button" className={mode === 'signup' ? 'active' : ''} onClick={() => setMode('signup')}>Request access</button></div>{mode === 'signin' ? <form onSubmit={handleSubmit} className="auth-form"><label><span>Email</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><label><span>Password</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label><div className="auth-actions"><button type="button" className="button button--outline" onClick={onCancel}>Back</button><button type="submit" className="button button--primary">Sign in</button></div></form> : <form onSubmit={handleSubmit} className="auth-form"><label><span>School name</span><input value={schoolName} onChange={(event) => setSchoolName(event.target.value)} placeholder="Northstar Science Academy" /></label><label><span>Location</span><input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="Accra, Ghana" /></label><label><span>Contact email</span><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="school@domain.com" /></label><div className="auth-actions"><button type="button" className="button button--outline" onClick={onCancel}>Back</button><button type="submit" className="button button--primary">Submit request</button></div></form>}</div></div>;
 }
 
 function mergeAssessments(current, incoming, submissions = []) {

@@ -26,6 +26,49 @@ export function SchoolDialog({ school, onClose, onSave }) {
   </section></div>;
 }
 
+export function DeveloperAccessDialog({ onClose, onGrant }) {
+  const [schoolName, setSchoolName] = useState('Northstar Science Academy');
+  const [schoolCode, setSchoolCode] = useState('LABQUESTDEV');
+  const [accessType, setAccessType] = useState('school-admin');
+  const [submitted, setSubmitted] = useState(false);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    const payload = {
+      schoolName: schoolName.trim(),
+      schoolCode: schoolCode.trim().toUpperCase(),
+      accessType,
+    };
+    await onGrant(payload);
+    setSubmitted(true);
+  };
+
+  return <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="modal-card developer-modal" role="dialog" aria-modal="true" aria-labelledby="developer-dialog-title">
+    <button className="modal-close icon-button" onClick={onClose} aria-label="Close"><X size={19} /></button>
+    {submitted ? <div className="success-screen"><span className="success-mark"><Check size={24} /></span><span className="eyebrow">ACCESS GRANTED</span><h2>School access confirmed.</h2><p>The school has been authorized with {accessType === 'school-admin' ? 'school-admin' : accessType === 'teacher' ? 'teacher' : 'student'} permissions. This is a demo-only developer flow and not a production identity system.</p><button className="button button--primary" onClick={onClose}>Continue</button></div> : <>
+      <div className="modal-kicker"><span className="modal-icon modal-icon--gold"><School size={19} /></span><span className="eyebrow">DEVELOPER ACCESS</span></div>
+      <h2 id="developer-dialog-title">Grant school access<br />and set the role boundary.</h2>
+      <p className="modal-description">This area is restricted to the LabQuest developer workflow. Schools receive a code and a clearly defined permission level.</p>
+      <form onSubmit={submit} className="form-stack developer-form">
+        <label>School name<input required minLength="3" value={schoolName} onChange={(event) => setSchoolName(event.target.value)} placeholder="e.g. Northstar Science Academy" /></label>
+        <label>School access code<input required minLength="6" value={schoolCode} onChange={(event) => setSchoolCode(event.target.value)} placeholder="e.g. LABQUESTDEV" /></label>
+        <label>Type of access<select value={accessType} onChange={(event) => setAccessType(event.target.value)}>
+          <option value="school-admin">School admin</option>
+          <option value="teacher">Teacher</option>
+          <option value="student">Student</option>
+        </select></label>
+        <div className="developer-access-summary">
+          <span className="eyebrow">CONFIRMED SCOPE</span>
+          <strong>{accessType === 'school-admin' ? 'School admin dashboard' : accessType === 'teacher' ? 'Teacher workspace' : 'Student workspace'}</strong>
+          <small>{schoolName || 'School name'} · {schoolCode || 'ACCESS-CODE'}</small>
+        </div>
+        <button className="button button--primary button--wide" type="submit">Grant access<ArrowRight size={17} /></button>
+      </form>
+      <div className="modal-footnote">Developer-only action · not a live authentication system</div>
+    </>}
+  </section></div>;
+}
+
 export function CreateAssessmentDialog({ classes = [], onClose, onCreate }) {
   const [title, setTitle] = useState('');
   const [subject, setSubject] = useState('Biology');

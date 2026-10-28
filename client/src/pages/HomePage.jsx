@@ -16,7 +16,7 @@ const steps = [
   { number: '03', title: 'Make sense of evidence', copy: 'Record observations, explain results and let teachers follow progress with class activities.', icon: Microscope },
 ];
 
-export default function HomePage({ onOpenDashboard }) {
+export default function HomePage({ onOpenDashboard, onOpenDeveloperAccess, onOpenOwnerDashboard }) {
   return <div className="landing-page" id="top">
     <header className="landing-nav">
       <a className="landing-brand" href="#top" aria-label="LabQuest home"><BrandMark /></a>
@@ -25,7 +25,11 @@ export default function HomePage({ onOpenDashboard }) {
         <a href="#subjects">Subjects</a>
         <a href="#schools">For schools</a>
       </nav>
-      <button className="landing-dashboard-tab" onClick={() => onOpenDashboard('student')}>Dashboard <ArrowUpRight size={16} /></button>
+      <div className="landing-nav-actions">
+        <button className="landing-developer-tab" onClick={onOpenDeveloperAccess}>Developer access</button>
+        <button className="landing-owner-tab" onClick={() => onOpenOwnerDashboard ? onOpenOwnerDashboard() : onOpenDeveloperAccess()}>App owner</button>
+        <button className="landing-dashboard-tab" onClick={() => onOpenDashboard('student')}>Dashboard <ArrowUpRight size={16} /></button>
+      </div>
     </header>
 
     <main>
@@ -36,7 +40,7 @@ export default function HomePage({ onOpenDashboard }) {
           <p>LabQuest brings practical science within reach through guided investigations, interactive simulations and learning tools for senior secondary students—even where a dedicated laboratory is not available.</p>
           <div className="landing-actions">
             <button className="landing-primary" onClick={() => onOpenDashboard('student')}>Explore the sample dashboard <ArrowRight size={17} /></button>
-            <a className="landing-secondary" href="#approach">See how it works <ArrowDown size={15} /></a>
+            <button className="landing-secondary" onClick={onOpenOwnerDashboard || onOpenDeveloperAccess}>App owner dashboard <ArrowRight size={15} /></button>
           </div>
           <div className="landing-demo-note"><span className="landing-demo-dot" /><span><strong>Open sample experience</strong> · No sign-in yet. Use fictional details only.</span></div>
           <div className="landing-audience"><Users size={16} /><span>For students, teachers and school communities</span></div>
@@ -66,12 +70,10 @@ export default function HomePage({ onOpenDashboard }) {
 
       <section className="landing-school-panel" id="schools" aria-labelledby="school-title">
         <div className="landing-school-art"><span className="landing-school-ring landing-school-ring--outer" /><span className="landing-school-ring landing-school-ring--inner" /><span className="landing-school-emblem"><School size={29} /></span><i className="landing-school-spark landing-school-spark--one">✳</i><i className="landing-school-spark landing-school-spark--two">✦</i><span className="landing-school-art-caption">LEARN · TRY · UNDERSTAND</span></div>
-        <div className="landing-school-copy"><span className="landing-eyebrow">MADE FOR SCHOOL COMMUNITIES</span><h2 id="school-title">A practical learning journey that meets schools <em>where they are.</em></h2><p>When laboratory facilities are limited, students can still rehearse a method, explore a safe virtual practical and build the habit of reasoning from evidence. LabQuest is designed to complement teacher-led learning and supervised hands-on work.</p><div className="landing-school-actions"><button className="landing-light-button" onClick={() => onOpenDashboard('teacher')}>Preview the teacher workspace <ArrowRight size={16} /></button><span><Users size={15} /> For educators and school leaders</span></div></div>
+        <div className="landing-school-copy"><span className="landing-eyebrow">MADE FOR SCHOOL COMMUNITIES</span><h2 id="school-title">A practical learning journey that meets schools <em>where they are.</em></h2><p>When laboratory facilities are limited, students can still rehearse a method, explore a safe virtual practical and build the habit of reasoning from evidence. LabQuest is designed to complement teacher-led learning and supervised hands-on work.</p><div className="landing-school-actions">                <button className="landing-light-button" onClick={() => onOpenDashboard('teacher')}>Preview the teacher workspace <ArrowRight size={16} /></button><button className="landing-light-button landing-light-button--muted" onClick={onOpenOwnerDashboard || onOpenDeveloperAccess}>App owner console <ArrowRight size={16} /></button><span><Users size={15} /> For educators and school leaders</span></div></div>
       </section>
 
-      <section className="landing-final-cta"><span className="landing-eyebrow">SEE LABQUEST IN ACTION</span><h2>Take a look around the sample workspace.</h2><p>Switch between student and teacher views to explore the current prototype.</p><button className="landing-primary" onClick={() => onOpenDashboard('student')}>Open the dashboard <ArrowRight size={17} /></button><small>This is a public prototype, not a secure school account. Please use fictional details only.</small></section>
-    </main>
+      <section className="landing-final-cta"><span className="landing-eyebrow">SEE LABQUEST IN ACTION</span><h2>Take a look around the sample workspace.</h2><p>Switch between student and teacher views to explore the current prototype.</p><div className="landing-final-actions"><button className="landing-primary" onClick={() => onOpenDashboard('student')}>Open the dashboard <ArrowRight size={17} /></button><button className="landing-primary landing-primary--secondary" onClick={onOpenOwnerDashboard || onOpenDeveloperAccess}>Open app owner dashboard <ArrowRight size={17} /></button></div><small>This is a public prototype, not a secure school account. Please use fictional details only.</small></section>    </main>
 
-    <footer className="landing-footer"><a href="#top" className="landing-footer-brand" aria-label="Back to top"><BrandMark /></a><p>Science in action, for every learner.</p><button onClick={() => onOpenDashboard('student')}>Dashboard <ArrowUpRight size={14} /></button><span>© LabQuest · Public sample demo</span></footer>
-  </div>;
+    <footer className="landing-footer"><a href="#top" className="landing-footer-brand" aria-label="Back to top"><BrandMark /></a><p>Science in action, for every learner.</p><button onClick={() => onOpenDashboard('student')}>Dashboard <ArrowUpRight size={14} /></button><span>© LabQuest · Public sample demo</span></footer>  </div>;
 }

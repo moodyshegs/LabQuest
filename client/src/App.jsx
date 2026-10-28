@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, Check, X } from 'lucide-react';
 import { Sidebar, Header, NotificationPanel } from './components/Shell.jsx';
-import { SchoolDialog, CreateAssessmentDialog } from './components/Dialogs.jsx';
+import { SchoolDialog, CreateAssessmentDialog, DeveloperAccessDialog } from './components/Dialogs.jsx';
 import { DashboardPage, PracticalsPage, PracticalSessionPage, AssessmentsPage, QuizExperience, ProgressPage, ClassPage, ReviewPage } from './pages/Pages.jsx';
 import HomePage from './pages/HomePage.jsx';
 import { api } from './lib/api.js';
@@ -15,9 +15,16 @@ const starter = {
   progress: { practicalsCompleted: 18, totalPracticals: 24, points: 740, streakDays: 6 },
 };
 
+const demoSchoolAccess = [
+  { id: 'school-01', name: 'Northstar Science Academy', code: 'LABQUESTDEV', accessType: 'school-admin', status: 'Active', region: 'Accra, Ghana', members: 128, lastAccess: '2 hours ago' },
+  { id: 'school-02', name: 'Lighthouse Girls College', code: 'LABQUEST-DEV', accessType: 'teacher', status: 'Active', region: 'Kumasi', members: 84, lastAccess: '5 hours ago' },
+  { id: 'school-03', name: 'Apex STEM Academy', code: 'NORTHSTAR2026', accessType: 'student', status: 'Pending', region: 'Cape Coast', members: 36, lastAccess: '1 day ago' },
+];
+
 export default function App() {
   const [role, setRole] = useState('student');
   const [view, setView] = useState('landing');
+  const [appOwnerMode, setAppOwnerMode] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [bootstrap, setBootstrap] = useState(starter);
   const [assessments, setAssessments] = useState(assessmentCatalog);
@@ -29,6 +36,8 @@ export default function App() {
   const [selectedAssessment, setSelectedAssessment] = useState(null);
   const [schoolDialog, setSchoolDialog] = useState(false);
   const [createDialog, setCreateDialog] = useState(false);
+  const [developerDialog, setDeveloperDialog] = useState(false);
+  const [ownerAccess, setOwnerAccess] = useState(demoSchoolAccess);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [toast, setToast] = useState(null);
 
@@ -54,6 +63,32 @@ export default function App() {
 
   const notify = (title, message, tone = 'success') => setToast({ title, message, tone });
   const goTo = (nextView) => { setSelectedPractical(null); setSelectedAssessment(null); setView(nextView); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const grantDeveloperAccess = async ({ schoolName, schoolCode, accessType }) => {
+    const accessKey = String(schoolCode || '').trim().toUpperCase();
+    const validCodes = new Set(['LABQUESTDEV', 'LABQUEST-DEV', 'LABQUESTADMIN', 'NORTHSTAR2026', 'SCHOOLACCESS']);
+    const typeMap = { 'school-admin': 'admin', teacher: 'teacher', student: 'student' };
+    if (!schoolName || !schoolCode || !validCodes.has(accessKey)) {
+      notify('Access code rejected', 'Use a valid developer access code to authorize a school.', 'error');
+      return;
+    }
+    const nextRole = typeMap[accessType] || 'admin';
+    const ownerRecord = {
+      id: `school-${Date.now()}`,
+      name: schoolName,
+      code: accessKey,
+      accessType,
+      status: 'Active',
+      region: 'Newly approved',
+      members: 40,
+      lastAccess: 'Just now',
+    };
+    setOwnerAccess((current) => [ownerRecord, ...current.filter((item) => item.name !== schoolName)]);
+    setBootstrap((current) => ({ ...current, school: { ...current.school, name: schoolName, schoolCode: accessKey } }));
+    setRole(nextRole);
+    setDeveloperDialog(false);
+    setView('dashboard');
+    notify('Developer access granted', `${schoolName} has been assigned ${accessType === 'school-admin' ? 'school-admin' : accessType === 'teacher' ? 'teacher' : 'student'} permissions.`, 'success');
+  };
   const openPractical = (practical) => { const match = practicalCatalog.find((item) => item.slug === practical.slug) || practicalCatalog[0]; setSelectedPractical(match); setSelectedAssessment(null); setView('practical-session'); };
   const startAssessment = (assessment) => { setSelectedAssessment(assessment); setView('quiz'); };
 
@@ -120,24 +155,27 @@ export default function App() {
     setAlerts((current) => current.map((item) => item.id === id ? { ...item, unread: false } : item));
     if (Number.isInteger(Number(id))) api.markAlertRead(id);
   };
-  if (view === 'landing') return <HomePage onOpenDashboard={(nextRole = 'student') => { setRole(nextRole); goTo('dashboard'); }} />;
+  if (view === 'landing') return <HomePage onOpenDashboard={(nextRole = 'student') => { setRole(nextRole); setAppOwnerMode(false); goTo('dashboard'); }} onOpenDeveloperAccess={() => setDeveloperDialog(true)} onOpenOwnerDashboard={() => { setAppOwnerMode(true); setRole('owner'); goTo('owner-dashboard'); }} />;
   const studentClass = bootstrap.studentClassName || bootstrap.classes?.[0]?.name;
-  const visibleAssessments = role === 'teacher' ? assessments : assessments.filter((item) => item.classroomName === studentClass || (!bootstrap.connected && !item.classroomName));
-  const page = selectedPractical ? <PracticalSessionPage practical={selectedPractical} completed={completed.includes(selectedPractical.slug)} onBack={() => goTo('practicals')} onComplete={completePractical} />
-    : view === 'quiz' && selectedAssessment ? <QuizExperience assessment={selectedAssessment} onExit={() => goTo('assessments')} onSubmit={submitAssessment} />
-      : view === 'dashboard' ? <DashboardPage role={role} bootstrap={bootstrap} assessments={visibleAssessments} completed={completed} points={points} onNavigate={goTo} onOpenPractical={openPractical} onStartAssessment={startAssessment} onCreate={() => setCreateDialog(true)} />
-        : view === 'practicals' ? <PracticalsPage role={role} completed={completed} onOpenPractical={openPractical} />
-          : view === 'assessments' ? <AssessmentsPage role={role} assessments={visibleAssessments} onStart={startAssessment} onCreate={() => setCreateDialog(true)} />
-            : view === 'progress' ? <ProgressPage role={role} points={points} completed={completed} />
-              : view === 'class' ? <ClassPage role={role} school={bootstrap.school} onSchool={() => setSchoolDialog(true)} />
-                : view === 'review' && role === 'teacher' ? <ReviewPage classes={bootstrap.classes || []} submissions={submissions} onSave={reviewWork} />
-                  : <DashboardPage role={role} bootstrap={bootstrap} assessments={visibleAssessments} completed={completed} points={points} onNavigate={goTo} onOpenPractical={openPractical} onStartAssessment={startAssessment} onCreate={() => setCreateDialog(true)} />;
+  const visibleAssessments = role === 'teacher' || role === 'admin' ? assessments : assessments.filter((item) => item.classroomName === studentClass || (!bootstrap.connected && !item.classroomName));
+  const page = appOwnerMode || role === 'owner'
+    ? <OwnerDashboardPage schools={ownerAccess} onBack={() => { setRole('student'); setAppOwnerMode(false); goTo('landing'); }} onGrant={grantDeveloperAccess} />
+    : selectedPractical ? <PracticalSessionPage practical={selectedPractical} completed={completed.includes(selectedPractical.slug)} onBack={() => goTo('practicals')} onComplete={completePractical} />
+      : view === 'quiz' && selectedAssessment ? <QuizExperience assessment={selectedAssessment} onExit={() => goTo('assessments')} onSubmit={submitAssessment} />
+        : view === 'dashboard' ? <DashboardPage role={role} bootstrap={bootstrap} assessments={visibleAssessments} completed={completed} points={points} onNavigate={goTo} onOpenPractical={openPractical} onStartAssessment={startAssessment} onCreate={() => setCreateDialog(true)} />
+          : view === 'practicals' ? <PracticalsPage role={role} completed={completed} onOpenPractical={openPractical} />
+            : view === 'assessments' ? <AssessmentsPage role={role} assessments={visibleAssessments} onStart={startAssessment} onCreate={() => setCreateDialog(true)} />
+              : view === 'progress' ? <ProgressPage role={role} points={points} completed={completed} />
+                : view === 'class' ? <ClassPage role={role} school={bootstrap.school} onSchool={() => setSchoolDialog(true)} />
+                  : view === 'review' && (role === 'teacher' || role === 'admin') ? <ReviewPage classes={bootstrap.classes || []} submissions={submissions} onSave={reviewWork} />
+                    : <DashboardPage role={role} bootstrap={bootstrap} assessments={visibleAssessments} completed={completed} points={points} onNavigate={goTo} onOpenPractical={openPractical} onStartAssessment={startAssessment} onCreate={() => setCreateDialog(true)} />;
 
-  return <div className="app-shell"><Sidebar active={view === 'practical-session' ? 'practicals' : view === 'quiz' ? 'assessments' : view} role={role} setRole={setRole} setActive={goTo} school={bootstrap.school} onSchool={() => setSchoolDialog(true)} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
-    <main className="main-shell"><div className="public-demo-notice" role="note"><strong>PUBLIC SAMPLE DEMO</strong><span>Use fictional details only. This prototype has no secure sign-in or school permissions; do not enter real student information.</span></div><Header role={role} school={bootstrap.school} alerts={alerts} onNotifications={() => setNotificationOpen(true)} onSchool={() => setSchoolDialog(true)} onMenu={() => setMobileOpen(true)} onCreate={() => setCreateDialog(true)} onHome={() => goTo('landing')} /><div className="workspace-content">{page}</div></main>
+  return <div className="app-shell"><Sidebar active={view === 'practical-session' ? 'practicals' : view === 'quiz' ? 'assessments' : view} role={role === 'owner' ? 'admin' : role} setRole={(nextRole) => { setRole(nextRole); setAppOwnerMode(nextRole === 'owner'); }} setActive={(nextView) => { setAppOwnerMode(false); goTo(nextView); }} school={bootstrap.school} onSchool={() => setSchoolDialog(true)} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
+    <main className="main-shell"><div className="public-demo-notice" role="note"><strong>PUBLIC SAMPLE DEMO</strong><span>Use fictional details only. This prototype has no secure sign-in or school permissions; do not enter real student information.</span></div><Header role={role === 'owner' ? 'admin' : role} school={bootstrap.school} alerts={alerts} onNotifications={() => setNotificationOpen(true)} onSchool={() => setSchoolDialog(true)} onMenu={() => setMobileOpen(true)} onCreate={() => setCreateDialog(true)} onHome={() => { setAppOwnerMode(false); setRole('student'); goTo('landing'); }} /><div className="workspace-content">{page}</div></main>
     {notificationOpen && <NotificationPanel alerts={alerts} onClose={() => setNotificationOpen(false)} onMarkRead={markRead} />}
     {schoolDialog && <SchoolDialog school={bootstrap.school} onClose={() => setSchoolDialog(false)} onSave={saveSchool} />}
     {createDialog && <CreateAssessmentDialog classes={bootstrap.classes || []} onClose={() => setCreateDialog(false)} onCreate={publishAssessment} />}
+    {developerDialog && <DeveloperAccessDialog onClose={() => setDeveloperDialog(false)} onGrant={grantDeveloperAccess} />}
     {toast && <div className={`toast toast--${toast.tone}`} role="status"><span className="toast-icon">{toast.tone === 'error' ? <AlertCircle size={17} /> : <Check size={17} />}</span><span><strong>{toast.title}</strong><small>{toast.message}</small></span><button onClick={() => setToast(null)} aria-label="Dismiss"><X size={16} /></button></div>}
     <div className="data-status" title={bootstrap.connected ? 'Connected to the managed database' : 'Sample data / prototype mode'}><i className={bootstrap.connected ? 'online' : ''} />{bootstrap.connected ? 'Managed data' : 'Demo data'}</div>
   </div>;

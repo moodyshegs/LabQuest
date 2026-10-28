@@ -14,11 +14,23 @@ The React client is separated from the Express routes and database access so ano
 ## Run locally
 
 ```bash
-pnpm install
-pnpm dev
+npm install
+npm run dev
 ```
 
-The server listens on port 3000. `pnpm build` creates the static client in `dist/`; `pnpm start` serves that build through Express.
+The server listens on port 3000. `npm run build` creates the static client in `dist/`; `npm start` serves that build through Express.
+
+## Deploy to Render
+
+This project is ready for a Render web service using the included `render.yaml` configuration.
+
+1. Push this repository to GitHub.
+2. Log in to Render and select New > Web Service.
+3. Connect the GitHub repository.
+4. Render will use the configuration in `render.yaml` automatically.
+5. The application will build with `npm install --include=dev && npm run build` and start with `npm start`.
+
+The service health check points at `/api/health`, and the app is designed to serve the Vite build from the Express server in production.
 
 ## Prototype boundary
 

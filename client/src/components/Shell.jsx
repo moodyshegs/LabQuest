@@ -15,6 +15,14 @@ const navTeacher = [
   { id: 'progress', label: 'Class progress', icon: Activity },
   { id: 'class', label: 'My classes', icon: Users, section: 'SCHOOL' },
 ];
+const navAdmin = [
+  { id: 'dashboard', label: 'School overview', icon: Home, section: 'CONTROL' },
+  { id: 'class', label: 'Lab operations', icon: School },
+  { id: 'practicals', label: 'Practical catalog', icon: LibraryBig },
+  { id: 'assessments', label: 'Assessments', icon: BookOpenCheck },
+  { id: 'review', label: 'Quality review', icon: Microscope },
+  { id: 'progress', label: 'School analytics', icon: Activity, section: 'REPORTS' },
+];
 
 export function BrandMark({ compact = false }) {
   return <div className={`brand-lockup ${compact ? 'brand-lockup--compact' : ''}`}>
@@ -28,16 +36,20 @@ export function Avatar({ initials = 'AO', tone = 'green', size = '' }) {
 }
 
 export function Sidebar({ active, role, setRole, setActive, school, onSchool, mobileOpen, setMobileOpen }) {
-  const entries = role === 'teacher' ? navTeacher : navStudent;
-  const profile = role === 'teacher' ? { name: 'Mrs. Esi Boateng', caption: 'Science teacher', initials: 'EB' } : { name: 'Amara Owusu', caption: 'Senior student · SS2', initials: 'AO' };
+  const entries = role === 'teacher' ? navTeacher : role === 'admin' ? navAdmin : navStudent;
+  const profile = role === 'teacher' ? { name: 'Mrs. Esi Boateng', caption: 'Science teacher', initials: 'EB' } : role === 'admin' ? { name: 'Mariam Okafor', caption: 'School admin', initials: 'MO' } : { name: 'Amara Owusu', caption: 'Senior student · SS2', initials: 'AO' };
   return <>
     {mobileOpen && <button className="mobile-scrim" onClick={() => setMobileOpen(false)} aria-label="Close navigation" />}
     <aside className={`sidebar ${mobileOpen ? 'sidebar--open' : ''}`}>
       <div className="sidebar-top"><BrandMark /><button className="icon-button sidebar-close" onClick={() => setMobileOpen(false)} aria-label="Close menu"><X size={19} /></button></div>
       <button className="school-switcher" onClick={onSchool} title="Switch or register a school">
-        <span className="school-icon"><School size={17} /></span><span className="school-info"><strong>{school?.name || 'Northstar Academy'}</strong><small>School workspace</small></span><ChevronDown size={15} className="muted-icon" />
+        <span className="school-icon"><School size={17} /></span><span className="school-info"><strong>{school?.name || 'Northstar Academy'}</strong><small>{role === 'admin' ? 'School control room' : 'School workspace'}</small></span><ChevronDown size={15} className="muted-icon" />
       </button>
-      <div className="role-switcher" aria-label="Prototype role switcher"><span className="role-label">VIEW AS</span><div><button className={role === 'student' ? 'selected' : ''} onClick={() => { setRole('student'); setActive('dashboard'); }}><span className="role-dot role-dot--student" />Student</button><button className={role === 'teacher' ? 'selected' : ''} onClick={() => { setRole('teacher'); setActive('dashboard'); }}><span className="role-dot role-dot--teacher" />Teacher</button></div></div>
+      <div className="role-switcher" aria-label="Prototype role switcher"><span className="role-label">VIEW AS</span><div>
+        <button className={role === 'student' ? 'selected' : ''} onClick={() => { setRole('student'); setActive('dashboard'); }}><span className="role-dot role-dot--student" />Student</button>
+        <button className={role === 'teacher' ? 'selected' : ''} onClick={() => { setRole('teacher'); setActive('dashboard'); }}><span className="role-dot role-dot--teacher" />Teacher</button>
+        <button className={role === 'admin' ? 'selected' : ''} onClick={() => { setRole('admin'); setActive('dashboard'); }}><span className="role-dot role-dot--admin" />Admin</button>
+      </div></div>
       <nav className="side-nav" aria-label="Main navigation">
         {entries.map((item, index) => <div key={item.id}>
           {item.section && <p className={`nav-section ${index ? 'nav-section--spaced' : ''}`}>{item.section}</p>}
@@ -47,8 +59,8 @@ export function Sidebar({ active, role, setRole, setActive, school, onSchool, mo
         </div>)}
       </nav>
       <div className="sidebar-bottom">
-        <div className="level-card"><span className="level-icon"><Sparkles size={17} /></span><div><small>YOUR SCIENCE STREAK</small><strong>{role === 'student' ? '6 days in a row' : 'Class is on fire'}</strong><div className="streak-dots"><i /><i /><i /><i /><i /><i /><i className="inactive" /></div></div></div>
-        <button className="profile-row" onClick={() => setRole(role === 'student' ? 'teacher' : 'student')}><Avatar initials={profile.initials} tone={role === 'teacher' ? 'gold' : 'green'} /><span><strong>{profile.name}</strong><small>{profile.caption}</small></span><ChevronDown size={15} className="muted-icon" /></button>
+        <div className="level-card"><span className="level-icon"><Sparkles size={17} /></span><div><small>{role === 'admin' ? 'LAB OPERATIONS' : 'YOUR SCIENCE STREAK'}</small><strong>{role === 'student' ? '6 days in a row' : role === 'admin' ? 'School activity healthy' : 'Class is on fire'}</strong><div className="streak-dots"><i /><i /><i /><i /><i /><i /><i className="inactive" /></div></div></div>
+        <button className="profile-row" onClick={() => { const next = role === 'student' ? 'teacher' : role === 'teacher' ? 'admin' : 'student'; setRole(next); setActive('dashboard'); }}><Avatar initials={profile.initials} tone={role === 'teacher' ? 'gold' : role === 'admin' ? 'blue' : 'green'} /><span><strong>{profile.name}</strong><small>{profile.caption}</small></span><ChevronDown size={15} className="muted-icon" /></button>
         <div className="sidebar-footnote">LABQUEST <span>·</span> PROTOTYPE</div>
       </div>
     </aside>
@@ -60,10 +72,13 @@ export function Header({ role, school, alerts, onNotifications, onSchool, onMenu
   return <header className="topbar">
     <button className="icon-button menu-toggle" onClick={onMenu} aria-label="Open menu"><Menu size={20} /></button>
     <div className="topbar-school"><span className="topbar-date">{now}</span><span className="topbar-divider">/</span><button onClick={onSchool}>{school?.name || 'Northstar Academy'} <ChevronDown size={14} /></button></div>
-    <div className="topbar-actions"><button className="home-return-link" onClick={onHome}><Home size={14} /> LabQuest home</button><span className="demo-pill"><i /> Demo workspace</span>
+    <div className="topbar-actions">
+      <button className="home-return-link" onClick={onHome}><Home size={14} /> LabQuest home</button>
+      <span className="demo-pill"><i /> Demo workspace</span>
       {role === 'teacher' && <button className="button button--primary button--small topbar-create" onClick={onCreate}><Plus size={16} /> Create activity</button>}
+      {role === 'admin' && <button className="button button--primary button--small topbar-create" onClick={onCreate}><Plus size={16} /> Launch activity</button>}
       <button className="notification-button" aria-label="Notifications" onClick={onNotifications}><Bell size={19} />{alerts?.some((item) => item.unread) && <i />}</button>
-      <Avatar initials={role === 'teacher' ? 'EB' : 'AO'} tone={role === 'teacher' ? 'gold' : 'green'} />
+      <Avatar initials={role === 'teacher' ? 'EB' : role === 'admin' ? 'MO' : 'AO'} tone={role === 'teacher' ? 'gold' : role === 'admin' ? 'blue' : 'green'} />
     </div>
   </header>;
 }

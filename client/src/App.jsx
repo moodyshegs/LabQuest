@@ -394,7 +394,7 @@ function AuthScreen({ onSubmit, onRegister, onCancel }) {
   const [registrationNotice, setRegistrationNotice] = useState(false);
 
   const handleSubmit = async (event) => {
-    event.preventDefault();
+    if (event) event.preventDefault();
     if (mode === 'register') {
       const ok = await onRegister({
         role: accountType,
@@ -437,7 +437,7 @@ function AuthScreen({ onSubmit, onRegister, onCancel }) {
           <label><span>School access code</span><input value={accessCode} onChange={(event) => setAccessCode(event.target.value)} placeholder="LABQUEST-STUDENT" /></label>
         </>}
         {mode === 'signin' && <div className="auth-inline-note">Select your role before signing in and use the matching access code.</div>}
-        <div className="auth-actions"><button type="button" className="button button--outline" onClick={onCancel}>Back</button><button type="submit" className="button button--primary">{mode === 'register' ? 'Register' : 'Sign in'}</button></div>
+        <div className="auth-actions"><button type="button" className="button button--outline" onClick={onCancel}>Back</button><button type="submit" className="button button--primary" onClick={(event) => { event.preventDefault(); handleSubmit(event); }}>{mode === 'register' ? 'Register' : 'Sign in'}</button></div>
       </form></div></div>;
 }
 
